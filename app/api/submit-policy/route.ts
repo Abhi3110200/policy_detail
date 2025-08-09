@@ -41,13 +41,13 @@ export async function POST(request: Request) {
       data: result
     });
 
-  } catch (error) { // Use 'any' for error type for broader catch
+  } catch (error: unknown) {
     console.error('API Error:', error);
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to save data to Google Sheet',
-        // details: error?.message || 'An unknown error occurred'
+        details: error instanceof Error ? error.message : 'An unknown error occurred'
       },
       { status: 500 }
     );

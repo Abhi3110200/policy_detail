@@ -18,35 +18,30 @@ interface PolicyData {
   submittedAt: string; // Ensure this is always passed
 }
 
-async function addRowFireAndForget(sheet: GoogleSpreadsheetWorksheet, rowData: any): Promise<{ success: boolean, isTimeout: boolean, rowNumber: number }> {
+// Type for our row data
+type RowData = Record<string, string | number | boolean | Date | null | undefined>;
+
+type AddRowResult = { success: boolean; isTimeout: boolean; rowNumber: number };
+
+async function addRowFireAndForget(sheet: GoogleSpreadsheetWorksheet, rowData: string[]): Promise<AddRowResult> {
   try {
     console.log('🔥 Using fire-and-forget approach...');
     
-    // Start the operation but don't wait for it
-    const addRowPromise = sheet.addRow(rowData, { raw: true });
-    
-    // Give it a very short time to complete, then assume success
-    const quickTimeout = new Promise<'timeout'>((resolve) => 
-      setTimeout(() => resolve('timeout'), 2000)
-    );
-    
-    const result = await Promise.race([addRowPromise, quickTimeout]);
-    
-    if (result === 'timeout') {
-      console.log('⚡ Operation likely succeeded but timed out waiting for response');
-      
-      // Don't wait - assume success and return immediately
-      return {
-        success: true,
-        isTimeout: true,
-        rowNumber: -1,
-      };
-    } else {
-      console.log(`✅ Quick response received. Row number: ${(result as GoogleSpreadsheetRow).rowNumber}`);
+    try {
+      // Add the row directly
+      const newRow = await sheet.addRow(rowData);
+      console.log(`✅ Row added successfully. Row number: ${newRow.rowNumber}`);
       return {
         success: true,
         isTimeout: false,
-        rowNumber: (result as GoogleSpreadsheetRow).rowNumber,
+        rowNumber: newRow.rowNumber,
+      };
+    } catch (error) {
+      console.error('Error adding row:', error);
+      return {
+        success: false,
+        isTimeout: false,
+        rowNumber: -1,
       };
     }
   } catch (error: any) {
@@ -168,7 +163,7 @@ async function addRowToSheet(data: PolicyData) {
     }
     
     console.log('Preparing row data for insertion...');
-    const rowData = {
+    const rowData: RowData = {
       'Company Name': data.companyName,
       'LOB Description': data.lobDescription,
       'Type': data.type,
@@ -186,14 +181,24 @@ async function addRowToSheet(data: PolicyData) {
     console.log('Attempting to add row with data:', rowData);
 
     try {
-      console.log('Calling sheet.addRow...');
-      const newRow = await addRowFireAndForget(sheet, rowData);
+      // Add the row by converting our RowData to an array of values
+      const headers = sheet.headerValues;
+      const rowValues = headers.map(header => {
+        const value = rowData[header as keyof RowData];
+        return value !== undefined && value !== null ? String(value) : '';
+      });
+      const result = await addRowFireAndForget(sheet, rowValues);
+      if (!result.success) {
+        throw new Error('Failed to add row to sheet');
+      }
+      // Create a simple object with the row number
+      const newRow = { rowNumber: result.rowNumber };
       console.log('sheet.addRow completed successfully.');
       console.log('Row added successfully to Google Sheet:', newRow.rowNumber);
       return { success: true, row: newRow };
-    } catch (addRowError: any) {
-      console.error('CRITICAL ERROR: Failed to add row to Google Sheet!', addRowError);
-      throw new Error(`Failed to add row to sheet: ${addRowError.message || 'Unknown error'}`);
+    } catch (error: unknown) {
+      console.error('CRITICAL ERROR: Failed to add row to Google Sheet!', error);
+      throw new Error(`Failed to add row to sheet: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } catch (error: any) {
     console.error('Overall Error in addRowToSheet:', error);
