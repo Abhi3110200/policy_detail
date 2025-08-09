@@ -151,7 +151,7 @@ async function addRowToSheet(data: PolicyData) {
             console.log('Headers already match expected headers. No action needed.');
           }
         }
-      } catch (headerLoadError) {
+      } catch (error) {
         console.warn('Error loading header row. This can happen if the first row is empty or malformed. Setting new headers...');
         try {
           // Clear existing first row if it exists
@@ -160,8 +160,8 @@ async function addRowToSheet(data: PolicyData) {
           }
           await sheet.setHeaderRow(expectedHeaders);
           console.log('New headers set successfully after error.');
-        } catch (setHeaderError) {
-          console.error('Failed to set headers after error:', setHeaderError);
+        } catch (error) {
+          console.error('Failed to set headers after error:', error);
           throw new Error('Could not set headers after multiple attempts');
         }
       }
