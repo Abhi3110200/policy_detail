@@ -1,4 +1,4 @@
-import { GoogleSpreadsheet, GoogleSpreadsheetRow, GoogleSpreadsheetWorksheet } from 'google-spreadsheet';
+import { GoogleSpreadsheet, GoogleSpreadsheetWorksheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
 // Define the expected structure for policy data
@@ -45,7 +45,7 @@ async function addRowFireAndForget(sheet: GoogleSpreadsheetWorksheet, rowData: s
       };
     }
   } catch (error: any) {
-    console.error('❌ Fire-and-forget failed:', error.message);
+    console.error('❌ Fire-and-forget failed:', error instanceof Error ? error.message : 'Unknown error');
     return {
       success: false,
       isTimeout: false,
