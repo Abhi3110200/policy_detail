@@ -44,8 +44,9 @@ async function addRowFireAndForget(sheet: GoogleSpreadsheetWorksheet, rowData: s
         rowNumber: -1,
       };
     }
-  } catch (error: any) {
-    console.error('❌ Fire-and-forget failed:', error instanceof Error ? error.message : 'Unknown error');
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Fire-and-forget failed:', errorMessage);
     return {
       success: false,
       isTimeout: false,
@@ -146,7 +147,7 @@ async function addRowToSheet(data: PolicyData) {
             console.log('Headers already match expected headers. No action needed.');
           }
         }
-      } catch (error) {
+      } catch (headerError) {
         console.warn('Error loading header row. This can happen if the first row is empty or malformed. Setting new headers...');
         try {
           // Clear existing first row if it exists
@@ -200,8 +201,9 @@ async function addRowToSheet(data: PolicyData) {
       console.error('CRITICAL ERROR: Failed to add row to Google Sheet!', error);
       throw new Error(`Failed to add row to sheet: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  } catch (error: any) {
-    console.error('Overall Error in addRowToSheet:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Overall Error in addRowToSheet:', errorMessage);
     throw error;
   }
 }
