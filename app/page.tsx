@@ -76,7 +76,7 @@ export default function Home() {
   }
   
   const handleInputChange = (field: keyof PolicyFormData, value: string) => {
-    let updatedFormData = { ...formData, [field]: value };
+    const updatedFormData = { ...formData, [field]: value };
   
     if (field === "Policy Start Date" && value) {
       const startDate = new Date(value);

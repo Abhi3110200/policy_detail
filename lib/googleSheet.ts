@@ -1,6 +1,10 @@
 import { google } from "googleapis";
 
-export async function addRowToSheet(rowData: Record<string, any>) {
+interface SheetRowData {
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export async function addRowToSheet(rowData: SheetRowData) {
   try {
     if (!rowData || typeof rowData !== "object" || Object.keys(rowData).length === 0) {
       throw new Error("rowData is empty or invalid");
