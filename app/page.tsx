@@ -244,7 +244,7 @@ export default function Home() {
                       <SelectValue placeholder="Select Company" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="New India Assurance">New India Assurance</SelectItem>
+                      <SelectItem value="New India Assurance">New India Assurance Co. Ltd.</SelectItem>
                       <SelectItem value="National Insurance Co. Ltd.">National Insurance Co. Ltd.</SelectItem>
                       <SelectItem value="Oriental Insurance Co. Ltd.">Oriental Insurance Co. Ltd.</SelectItem>
                       <SelectItem value="Bajaj Alianz GIC Ltd.">Bajaj Alianz GIC Ltd.</SelectItem>
@@ -252,7 +252,7 @@ export default function Home() {
                       <SelectItem value="TATA AIG GIC Ltd.">TATA AIG GIC Ltd.</SelectItem>
                       <SelectItem value="Iffco Tokio GIC Ltd.">Iffco Tokio GIC Ltd.</SelectItem>
                       <SelectItem value="Shriram GIC Ltd.">Shriram GIC Ltd.</SelectItem>
-                      <SelectItem value="Royal Sundaram">Royal Sundaram</SelectItem>
+                      <SelectItem value="Royal Sundaram">Royal Sundaram GIC Ltd.</SelectItem>
                       <SelectItem value="HDFC ERGO GIC Ltd.">HDFC ERGO GIC Ltd.</SelectItem>
                       <SelectItem value="ICICI Lombard GIC Ltd.">ICICI Lombard GIC Ltd.</SelectItem>
                       <SelectItem value="Reliance GIC Ltd.">Reliance GIC Ltd.</SelectItem>
