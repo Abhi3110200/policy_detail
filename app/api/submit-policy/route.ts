@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addRowToSheet } from '@/lib/googleSheet';
+import {addRowToSheet} from '@/lib/googleSheet';
 
 export async function POST(request: Request) {
   console.log('Received request to /api/submit-policy');
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     console.log('Request body:', JSON.stringify(body, null, 2));
 
     // Validate required fields
-    const requiredFields = ['companyName', 'lobDescription', 'type', 'policyNo', 'insuredName'];
+    const requiredFields = ['Company Name', 'LOB Description', 'Type', 'Policy No', 'Insured Name', 'Prefix', 'Insured Name', 'Policy Start Date', 'Expiry Date', 'Sum Insured', 'Premium', 'GST', 'Total Premium'];
     const missingFields = requiredFields.filter(field => !body[field]);
 
     if (missingFields.length > 0) {
@@ -23,10 +23,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Format date as '27th Aug 2025' with date before month
+    const formatDate = (date: Date) => {
+      const day = date.getDate();
+      const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
+      const month = date.toLocaleString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      return `${day}${suffix} ${month} ${year}`;
+    };
+
     // Add submittedAt to the data before passing to addRowToSheet
     const dataToSave = {
       ...body,
-      submittedAt: new Date().toISOString(), // Add current timestamp
     };
     console.log('Data to save:', JSON.stringify(dataToSave, null, 2));
 

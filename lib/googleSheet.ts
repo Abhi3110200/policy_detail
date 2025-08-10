@@ -1,211 +1,80 @@
-import { GoogleSpreadsheet, GoogleSpreadsheetWorksheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
+import { google } from "googleapis";
 
-// Define the expected structure for policy data
-interface PolicyData {
-  companyName: string;
-  lobDescription: string;
-  type: string;
-  policyNo: string;
-  prefix: string;
-  insuredName: string;
-  policyStartDate: string;
-  expiryDate: string;
-  sumInsured: string;
-  premium: string;
-  gst: string;
-  totalPremium: string;
-  submittedAt: string; // Ensure this is always passed
-}
-
-// Type for our row data
-type RowData = Record<string, string | number | boolean | Date | null | undefined>;
-
-type AddRowResult = { success: boolean; isTimeout: boolean; rowNumber: number };
-
-async function addRowFireAndForget(sheet: GoogleSpreadsheetWorksheet, rowData: string[]): Promise<AddRowResult> {
+export async function addRowToSheet(rowData: Record<string, any>) {
   try {
-    console.log('🔥 Using fire-and-forget approach...');
-    
-    try {
-      // Add the row directly
-      const newRow = await sheet.addRow(rowData);
-      console.log(`✅ Row added successfully. Row number: ${newRow.rowNumber}`);
-      return {
-        success: true,
-        isTimeout: false,
-        rowNumber: newRow.rowNumber,
-      };
-    } catch (error) {
-      console.error('Error adding row:', error);
-      return {
-        success: false,
-        isTimeout: false,
-        rowNumber: -1,
-      };
-    }
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('❌ Fire-and-forget failed:', errorMessage);
-    return {
-      success: false,
-      isTimeout: false,
-      rowNumber: -1,
-    };
-  }
-}
-
-async function addRowToSheet(data: PolicyData) {
-  console.log('Starting addRowToSheet with data:', JSON.stringify(data, null, 2));
-  try {
-    const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-    const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
-    
-    if (!SHEET_ID || !SERVICE_ACCOUNT_EMAIL || !PRIVATE_KEY) {
-      const errorMsg = 'Missing Google Sheets environment variables. ' +
-        `SHEET_ID: ${SHEET_ID ? 'Set' : 'Missing'}, ` +
-        `SERVICE_ACCOUNT_EMAIL: ${SERVICE_ACCOUNT_EMAIL ? 'Set' : 'Missing'}, ` +
-        `PRIVATE_KEY: ${PRIVATE_KEY ? 'Set' : 'Missing'}`;
-      console.error(errorMsg);
-      throw new Error('Missing Google Sheets environment variables. Please check your .env file.');
+    if (!rowData || typeof rowData !== "object" || Object.keys(rowData).length === 0) {
+      throw new Error("rowData is empty or invalid");
     }
 
-    console.log('Creating Google Sheets client...');
-    const serviceAccountAuth = new JWT({
-      email: SERVICE_ACCOUNT_EMAIL,
-      key: PRIVATE_KEY.replace(/\\n/g, '\n'), // Replace escaped newlines
-      scopes: [
-        'https://www.googleapis.com/auth/spreadsheets',
-      ],
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"), // Convert escaped \n to real newlines
+      },
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
-    console.log('Google Sheets client created');
 
-    console.log('Loading Google Spreadsheet...');
-    const doc = new GoogleSpreadsheet(SHEET_ID, serviceAccountAuth);
-    try {
-      await doc.loadInfo(); // Load the document properties and worksheets
-      console.log(`Loaded spreadsheet: ${doc.title}`);
-    } catch (error) {
-      console.error('Error loading spreadsheet. Make sure the SHEET_ID is correct and the service account has access to it.');
-      throw error;
-    }
-    
-    const sheet = doc.sheetsByIndex[0]; // Get the first sheet
-    console.log('Working with sheet:', sheet.title);
+    const sheets = google.sheets({ version: "v4", auth });
 
-    const expectedHeaders = [
-      'Company Name',
-      'LOB Description',
-      'Type',
-      'Policy No',
-      'Prefix',
-      'Insured Name',
-      'Policy Start Date',
-      'Expiry Date',
-      'Sum Insured',
-      'Premium',
-      'GST',
-      'Total Premium',
-      'Submitted At'
-    ];
-    
-    console.log('Checking/Setting up headers...');
-    
-    // First, check if the sheet is completely empty
-    if (sheet.rowCount === 0) {
-      console.log('Sheet is empty, setting headers...');
-      await sheet.setHeaderRow(expectedHeaders);
-      console.log('Headers set successfully for empty sheet.');
-    } 
-    // If sheet has rows but no header values, or if loading headers fails
-    else {
-      try {
-        // Try to load existing headers
-        await sheet.loadHeaderRow();
-        
-        // If we get here, headers exist but might be empty
-        if (!sheet.headerValues || sheet.headerValues.length === 0) {
-          console.log('Header row exists but is empty. Setting new headers...');
-          await sheet.setHeaderRow(expectedHeaders);
-          console.log('New headers set successfully.');
-        } 
-        // Check if existing headers match what we expect
-        else {
-          console.log('Existing headers loaded:', sheet.headerValues);
-          
-          // Check if headers match exactly (order matters)
-          const headersMatch = expectedHeaders.every(
-            (header, index) => sheet.headerValues && sheet.headerValues[index] === header
-          );
-          
-          if (!headersMatch) {
-            console.warn('Headers do not match expected headers. Updating to match expected format.');
-            await sheet.setHeaderRow(expectedHeaders);
-            console.log('Headers updated successfully.');
-          } else {
-            console.log('Headers already match expected headers. No action needed.');
-          }
-        }
-      } catch (headerError) {
-        console.warn('Error loading header row. This can happen if the first row is empty or malformed. Setting new headers...');
-        try {
-          // Clear existing first row if it exists
-          if (sheet.rowCount > 0) {
-            await sheet.clear();
-          }
-          await sheet.setHeaderRow(expectedHeaders);
-          console.log('New headers set successfully after error.');
-        } catch (error) {
-          console.error('Failed to set headers after error:', error);
-          throw new Error('Could not set headers after multiple attempts');
-        }
-      }
-    }
-    
-    console.log('Preparing row data for insertion...');
-    const rowData: RowData = {
-      'Company Name': data.companyName,
-      'LOB Description': data.lobDescription,
-      'Type': data.type,
-      'Policy No': data.policyNo,
-      'Prefix': data.prefix,
-      'Insured Name': data.insuredName,
-      'Policy Start Date': data.policyStartDate,
-      'Expiry Date': data.expiryDate,
-      'Sum Insured': data.sumInsured,
-      'Premium': data.premium,
-      'GST': data.gst,
-      'Total Premium': data.totalPremium,
-      'Submitted At': data.submittedAt,
-    };
-    console.log('Attempting to add row with data:', rowData);
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    if (!spreadsheetId) throw new Error("GOOGLE_SHEET_ID is missing in env");
 
-    try {
-      // Add the row by converting our RowData to an array of values
-      const headers = sheet.headerValues;
-      const rowValues = headers.map(header => {
-        const value = rowData[header as keyof RowData];
-        return value !== undefined && value !== null ? String(value) : '';
+    const sheetName = "Sheet1";
+
+    // 1️⃣ Get existing headers from first row
+    const headerRes = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${sheetName}!1:1`,
+    });
+    let headers: string[] = headerRes.data.values?.[0] || [];
+
+    // 2️⃣ If no headers exist, create them and add the first row immediately
+    if (headers.length === 0) {
+      const keys = Object.keys(rowData);
+
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${sheetName}!1:1`,
+        valueInputOption: "RAW",
+        requestBody: { values: [keys] },
       });
-      const result = await addRowFireAndForget(sheet, rowValues);
-      if (!result.success) {
-        throw new Error('Failed to add row to sheet');
-      }
-      // Create a simple object with the row number
-      const newRow = { rowNumber: result.rowNumber };
-      console.log('sheet.addRow completed successfully.');
-      console.log('Row added successfully to Google Sheet:', newRow.rowNumber);
-      return { success: true, row: newRow };
-    } catch (error: unknown) {
-      console.error('CRITICAL ERROR: Failed to add row to Google Sheet!', error);
-      throw new Error(`Failed to add row to sheet: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: sheetName,
+        valueInputOption: "RAW",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: [keys.map(k => rowData[k] ?? "")] },
+      });
+
+      console.log("✅ Created headers and inserted first row");
+      return { success: true };
     }
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Overall Error in addRowToSheet:', errorMessage);
-    throw error;
+
+    // 3️⃣ Normalize headers (trim spaces to avoid mismatch issues)
+    headers = headers.map(h => h.trim());
+
+    // 4️⃣ Map rowData to header order; fill in blanks for missing columns
+    const rowValues = headers.map(header => rowData[header] ?? "");
+
+    // 5️⃣ Check if row has at least one non-empty value
+    if (rowValues.every(value => value === "")) {
+      throw new Error("All values are empty — not appending blank row");
+    }
+
+    // 6️⃣ Append the row
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: sheetName,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [rowValues] },
+    });
+
+    console.log("✅ Row appended to Google Sheet");
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Error adding row to Google Sheet:", error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
-
-export { addRowToSheet }; // Export as named export

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from 'react'
 import { RefreshCw, Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
@@ -11,73 +10,114 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 
+const typeOptions:Record<string, string[]> = {
+  "Motor Insurance": [
+    "Commercial Vehicle",
+    "Private Vehicle",
+    "Two Wheeler"
+  ],
+  "Health Insurance": [
+    "Individual",
+    "Floater",
+    "Top Up Mediclaim",
+    "Extra Care",
+  ],
+  "Fire Insurance": [
+    "Standard & Perils Insurance",
+    "Office Insurance",
+    "House Holder Policy",
+    "Godown",
+  ],
+  "Workmen Compensation": [
+    "Employees Insurance",
+    "Public Liability Insurance"
+  ],
+  "Professional Indemnity": [
+    "Doctors Indemnity"
+  ]
+}
+
+
 interface PolicyFormData {
-  companyName: string
-  lobDescription: string
-  type: string
-  policyNo: string
-  prefix: string
-  insuredName: string
-  policyStartDate: string
-  expiryDate: string
-  sumInsured: string
-  premium: string
-  gst: string
-  totalPremium: string
+  "Company Name": string
+  "LOB Description": string
+  "Type": string
+  "Policy No": string
+  "Prefix": string
+  "Insured Name": string
+  "Policy Start Date": string
+  "Expiry Date": string
+  "Sum Insured": string
+  "Premium": string
+  "GST": string
+  "Total Premium": string
 }
 
 export default function Home() {
   const [formData, setFormData] = useState<PolicyFormData>({
-    companyName: '',
-    lobDescription: '',
-    type: '',
-    policyNo: '',
-    prefix: '',
-    insuredName: '',
-    policyStartDate: '',
-    expiryDate: '',
-    sumInsured: '',
-    premium: '',
-    gst: '',
-    totalPremium: '',
+    "Company Name": '',
+    "LOB Description": '',
+    "Type": '',
+    "Policy No": '',
+    "Prefix": '',
+    "Insured Name": '',
+    "Policy Start Date": '',
+    "Expiry Date": '',
+    "Sum Insured": '',
+    "Premium": '',
+    "GST": '',
+    "Total Premium": '',
   })
 
-  const handleInputChange = (field: keyof PolicyFormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+  function formatDate(dateStr: string): string {
+    if (!dateStr) return "";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}/${month}/${year}`;
   }
+  
+  const handleInputChange = (field: keyof PolicyFormData, value: string) => {
+    let updatedFormData = { ...formData, [field]: value };
+  
+    if (field === "Policy Start Date" && value) {
+      const startDate = new Date(value);
+      const expiryDate = new Date(startDate);
+      expiryDate.setFullYear(startDate.getFullYear() + 1);
+      expiryDate.setDate(expiryDate.getDate() - 1);
+      updatedFormData["Expiry Date"] = expiryDate.toISOString().split("T")[0];
+    }
+  
+    setFormData(updatedFormData);
+  };
+  
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleGSTChange = (value: string) => {
-    // Remove non-numeric characters (like '₹' and commas) before parsing
+  const handleGSTChange = (field: keyof PolicyFormData, value: string) => {
     const cleanValue = value.replace(/[^0-9.]/g, "")
     const premiumValue = Number.parseFloat(cleanValue)
-    
+
     if (!isNaN(premiumValue)) {
       // Calculate 18% GST on the premium
-      const gstAmount = (premiumValue * 0.18).toFixed(2)
-      const total = (premiumValue + parseFloat(gstAmount)).toFixed(2)
-      
+      const gstAmount = Math.round(premiumValue * 0.18)
+      const total = premiumValue + gstAmount
+
       console.log("Premium:", premiumValue)
       console.log("Calculated GST (18%):", gstAmount)
       console.log("Total Premium (Premium + GST):", total)
-      
+
       setFormData(prev => ({
         ...prev,
-        premium: cleanValue,
-        gst: gstAmount,
-        totalPremium: total
+        [field]: cleanValue,
+        "GST": gstAmount.toString(),
+        "Total Premium": total.toString()
       }))
     } else {
       // If invalid number, just update the premium field
       setFormData(prev => ({
         ...prev,
-        premium: cleanValue,
-        gst: '',
-        totalPremium: ''
+        [field]: cleanValue,
+        "GST": '',
+        "Total Premium": ''
       }))
       console.log("Invalid premium value:", cleanValue)
     }
@@ -85,18 +125,18 @@ export default function Home() {
 
   const handleReset = () => {
     setFormData({
-      companyName: "",
-      lobDescription: "",
-      type: "",
-      policyNo: "",
-      prefix: "",
-      insuredName: "",
-      policyStartDate: "",
-      expiryDate: "",
-      sumInsured: "",
-      premium: "",
-      gst: "",
-      totalPremium: "",
+      "Company Name": "",
+      "LOB Description": "",
+      "Type": "",
+      "Policy No": "",
+      "Prefix": "",
+      "Insured Name": "",
+      "Policy Start Date": "",
+      "Expiry Date": "",
+      "Sum Insured": "",
+      "Premium": "",
+      "GST": "",
+      "Total Premium": "",
     })
     toast.success("Form reset successfully!")
   }
@@ -106,7 +146,7 @@ export default function Home() {
     console.log('Form submission started', { formData })
 
     // Validate required fields
-    const requiredFields = ["companyName", "lobDescription", "type", "policyNo", "insuredName"]
+    const requiredFields = ["Company Name", "LOB Description", "Type", "Policy No", "Insured Name"]
     const missingFields = requiredFields.filter((field) => !formData[field as keyof PolicyFormData])
 
     if (missingFields.length > 0) {
@@ -116,13 +156,14 @@ export default function Home() {
       return
     }
 
-    setIsLoading(true)
-    console.log('Sending request to /api/submit-policy', { formData })
-
-    const policyData = {
+    const formattedData = {
       ...formData,
-      submittedAt: new Date().toISOString(),
-    }
+      "Policy Start Date": formatDate(formData["Policy Start Date"]),
+      "Expiry Date": formatDate(formData["Expiry Date"]),
+    };
+
+    setIsLoading(true)
+    console.log('Sending request to /api/submit-policy', { formattedData })
 
     try {
       const response = await fetch("/api/submit-policy", {
@@ -130,9 +171,9 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(policyData),
+        body: JSON.stringify(formattedData),
       })
-      
+
       console.log('Received response status:', response.status)
       const result = await response.json()
       console.log('API Response:', JSON.stringify(result, null, 2))
@@ -140,18 +181,18 @@ export default function Home() {
       if (result.success) {
         // Reset form values
         setFormData({
-          companyName: "",
-          lobDescription: "",
-          type: "",
-          policyNo: "",
-          prefix: "",
-          insuredName: "",
-          policyStartDate: "",
-          expiryDate: "",
-          sumInsured: "",
-          premium: "",
-          gst: "",
-          totalPremium: "",
+          "Company Name": "",
+          "LOB Description": "",
+          "Type": "",
+          "Policy No": "",
+          "Prefix": "",
+          "Insured Name": "",
+          "Policy Start Date": "",
+          "Expiry Date": "",
+          "Sum Insured": "",
+          "Premium": "",
+          "GST": "",
+          "Total Premium": "",
         })
         toast.success("Policy data saved to Google Sheet successfully!")
       } else {
@@ -169,6 +210,9 @@ export default function Home() {
       console.log("isLoading set to false")
     }
   }
+  
+
+ 
 
 
   return (
@@ -186,7 +230,7 @@ export default function Home() {
                   <Label htmlFor="companyName" className="text-sm font-medium text-gray-600">
                     Company Name
                   </Label>
-                  <Select value={formData.companyName} onValueChange={(value) => handleInputChange('companyName', value)}>
+                  <Select value={formData['Company Name']} onValueChange={(value) => handleInputChange('Company Name', value)}>
                     <SelectTrigger className="bg-gray-100 w-full border-0 focus:ring-2 focus:ring-blue-500">
                       <SelectValue placeholder="Select Company" />
                     </SelectTrigger>
@@ -213,14 +257,14 @@ export default function Home() {
                   <Label htmlFor="lobDescription" className="text-sm font-medium text-gray-600">
                     LOB Description
                   </Label>
-                  <Select value={formData.lobDescription} onValueChange={(value) => handleInputChange('lobDescription', value)}>
+                  <Select value={formData['LOB Description']} onValueChange={(value) => handleInputChange('LOB Description', value)}>
                     <SelectTrigger className="bg-gray-100 w-full border-0 focus:ring-2 focus:ring-blue-500">
                       <SelectValue placeholder="Select LOB" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Motor">Motor</SelectItem>
                       <SelectItem value="Health Insurance">Health Insurance</SelectItem>
-                      <SelectItem value="Fire">Fire</SelectItem>
+                      <SelectItem value="Motor Insurance">Motor Insurance</SelectItem>
+                      <SelectItem value="Fire Insurance">Fire Insurance</SelectItem>
                       <SelectItem value="Workmen Compensation">Workmen Compensation</SelectItem>
                       <SelectItem value="Professional Indemnity">Professional Indemnity</SelectItem>
                     </SelectContent>
@@ -234,24 +278,16 @@ export default function Home() {
                   <Label htmlFor="type" className="text-sm font-medium text-gray-600">
                     Type
                   </Label>
-                  <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
+                  <Select value={formData['Type']} onValueChange={(value) => handleInputChange('Type', value)}>
                     <SelectTrigger className="bg-gray-100 w-full border-0 focus:ring-2 focus:ring-blue-500">
                       <SelectValue placeholder="Select Type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Individual">Individual</SelectItem>
-                      <SelectItem value="Floater">Floater</SelectItem>
-                      <SelectItem value="Organisation">Organisation</SelectItem>
-                      <SelectItem value="Commercial Vehicle">Commercial Vehicle</SelectItem>
-                      <SelectItem value="Private Vehicle">Private Vehicle</SelectItem>
-                      <SelectItem value="Top Up Mediclaim">Top Up Mediclaim</SelectItem>
-                      <SelectItem value="Extra Care">Extra Care</SelectItem>
-                      <SelectItem value="Employee">Employee</SelectItem>
-                      <SelectItem value="Godown">Godown</SelectItem>
-                      <SelectItem value="Two Wheeler">Two Wheeler</SelectItem>
-                      <SelectItem value="Office Insurance">Office Insurance</SelectItem>
-                      <SelectItem value="Standard & Perils Insurance Fire">Standard & Perils Insurance Fire</SelectItem>
-                      <SelectItem value="Public Liability Insurance">Public Liability Insurance</SelectItem>
+                    {typeOptions[formData['LOB Description']]?.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -263,8 +299,8 @@ export default function Home() {
                   <Input
                     id="policyNo"
                     type="text"
-                    value={formData.policyNo}
-                    onChange={(e) => handleInputChange('policyNo', e.target.value)}
+                    value={formData['Policy No']}
+                    onChange={(e) => handleInputChange('Policy No', e.target.value)}
                     placeholder="Enter Policy Number"
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                   />
@@ -277,7 +313,7 @@ export default function Home() {
                   <Label htmlFor="prefix" className="text-sm font-medium text-gray-600">
                     Prefix
                   </Label>
-                  <Select value={formData.prefix} onValueChange={(value) => handleInputChange('prefix', value)}>
+                  <Select value={formData['Prefix']} onValueChange={(value) => handleInputChange('Prefix', value)}>
                     <SelectTrigger className="bg-gray-100 w-full border-0 focus:ring-2 focus:ring-blue-500">
                       <SelectValue placeholder="Select Prefix" />
                     </SelectTrigger>
@@ -297,8 +333,8 @@ export default function Home() {
                   <Input
                     id="insuredName"
                     type="text"
-                    value={formData.insuredName}
-                    onChange={(e) => handleInputChange('insuredName', e.target.value)}
+                    value={formData['Insured Name']}
+                    onChange={(e) => handleInputChange('Insured Name', e.target.value)}
                     placeholder="Enter Insured Name"
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                   />
@@ -314,8 +350,8 @@ export default function Home() {
                   <Input
                     id="policyStartDate"
                     type="date"
-                    value={formData.policyStartDate}
-                    onChange={(e) => handleInputChange('policyStartDate', e.target.value)}
+                    value={formData['Policy Start Date']}
+                    onChange={(e) => handleInputChange('Policy Start Date', e.target.value)}
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -327,8 +363,8 @@ export default function Home() {
                   <Input
                     id="expiryDate"
                     type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) => handleInputChange('expiryDate', e.target.value)}
+                    value={formData['Expiry Date']}
+                    onChange={(e) => handleInputChange('Expiry Date', e.target.value)}
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -340,23 +376,24 @@ export default function Home() {
                   <Label htmlFor="sumInsured" className="text-sm font-medium text-gray-600">
                     Sum Insured (in ₹)
                   </Label>
-                  <Select value={formData.sumInsured} onValueChange={(value) => handleInputChange('sumInsured', value)}>
+                  <Select value={formData['Sum Insured']} onValueChange={(value) => handleInputChange('Sum Insured', value)}>
                     <SelectTrigger className="bg-gray-100 w-full border-0 focus:ring-2 focus:ring-blue-500">
                       <SelectValue placeholder="Select Sum Insured" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="₹1,00,000">₹1,00,000</SelectItem>
-                      <SelectItem value="₹2,00,000">₹2,00,000</SelectItem>
-                      <SelectItem value="₹3,00,000">₹3,00,000</SelectItem>
-                      <SelectItem value="₹4,00,000">₹4,00,000</SelectItem>
-                      <SelectItem value="₹5,00,000">₹5,00,000</SelectItem>
-                      <SelectItem value="₹8,00,000">₹8,00,000</SelectItem>
-                      <SelectItem value="₹10,00,000">₹10,00,000</SelectItem>
-                      <SelectItem value="₹15,00,000">₹15,00,000</SelectItem>
-                      <SelectItem value="₹20,00,000">₹20,00,000</SelectItem>
-                      <SelectItem value="₹22,00,000">₹22,00,000</SelectItem>
-                      <SelectItem value="₹25,00,000">₹25,00,000</SelectItem>
-                      <SelectItem value="₹50,00,000">₹50,00,000</SelectItem>
+                      <SelectItem value="100000">₹1,00,000</SelectItem>
+                      <SelectItem value="200000">₹2,00,000</SelectItem>
+                      <SelectItem value="300000">₹3,00,000</SelectItem>
+                      <SelectItem value="400000">₹4,00,000</SelectItem>
+                      <SelectItem value="500000">₹5,00,000</SelectItem>
+                      <SelectItem value="800000">₹8,00,000</SelectItem>
+                      <SelectItem value="1000000">₹10,00,000</SelectItem>
+                      <SelectItem value="1300000">₹13,00,000</SelectItem>
+                      <SelectItem value="1500000">₹15,00,000</SelectItem>
+                      <SelectItem value="2000000">₹20,00,000</SelectItem>
+                      <SelectItem value="2200000">₹22,00,000</SelectItem>
+                      <SelectItem value="2500000">₹25,00,000</SelectItem>
+                      <SelectItem value="5000000">₹50,00,000</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -368,8 +405,8 @@ export default function Home() {
                   <Input
                     id="premium"
                     type="text"
-                    value={formData.premium}
-                    onChange={(e) => handleGSTChange(e.target.value)}
+                    value={formData['Premium']}
+                    onChange={(e) => handleGSTChange('Premium', e.target.value)}
                     placeholder="Enter Premium (in ₹)"
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                   />
@@ -379,14 +416,14 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="gst" className="text-sm font-medium text-gray-600">
-                    GST (in %)
+                    GST (in 18%)
                   </Label>
                   <Input
                     id="gst"
                     type="text"
-                    value={formData.gst}
-                    onChange={(e) => handleInputChange('gst', e.target.value)}
-                    placeholder="Enter GST (in %)"
+                    value={formData['GST']}
+                    onChange={(e) => handleInputChange('GST', e.target.value)}
+                    placeholder="Enter GST (in 18%)"
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                     readOnly
                   />
@@ -399,8 +436,8 @@ export default function Home() {
                   <Input
                     id="totalPremium"
                     type="text"
-                    value={formData.totalPremium}
-                    onChange={(e) => handleInputChange('totalPremium', e.target.value)}
+                    value={formData['Total Premium']}
+                    onChange={(e) => handleInputChange('Total Premium', e.target.value)}
                     placeholder="Enter Total Premium (in ₹)"
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                   />
@@ -410,19 +447,9 @@ export default function Home() {
               {/* Action Buttons */}
               <div className="flex flex-row gap-4 pt-6">
                 <Button
-                  type="button"
-                  disabled={isLoading}
-                  variant="outline"
-                  onClick={handleReset}
-                  className="flex items-center justify-center gap-2 h-[48px]"
-                >
-                  <RefreshCw className="w-5 h-5" />
-                </Button>
-
-                <Button
                   type="submit"
                   disabled={isLoading}
-                  className="flex-1 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 h-[48px]"
+                  className="flex-1 bg-blue-800 hover:bg-blue-900 disabled:opacity-50 h-[48px]"
                 >
                   {isLoading ? (
                     <>
@@ -432,6 +459,16 @@ export default function Home() {
                   ) : (
                     "Submit to Google Sheet"
                   )}
+                </Button>
+
+                <Button
+                  type="button"
+                  disabled={isLoading}
+                  variant="outline"
+                  onClick={handleReset}
+                  className="flex items-center justify-center gap-2 h-[48px]"
+                >
+                  <RefreshCw className="w-5 h-5" /> Reset
                 </Button>
               </div>
             </form>
