@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     console.log('Request body:', JSON.stringify(body, null, 2));
 
     // Validate required fields
-    const requiredFields = ['Company Name', 'LOB Description', 'Type', 'Policy No', 'Insured Name', 'Prefix', 'Insured Name', 'Policy Start Date', 'Expiry Date', 'Sum Insured', 'Premium', 'GST', 'Total Premium'];
+    const requiredFields = ['Company Name', 'LOB Description', 'Type', 'Policy No', 'Insured Name', 'Prefix', 'Insured Name', 'Policy Start Date', 'Expiry Date', 'Sum Insured (in ₹)', 'Premium (in ₹)', 'GST (in ₹)', 'Total Premium (in ₹)'];
     const missingFields = requiredFields.filter(field => !body[field]);
 
     if (missingFields.length > 0) {

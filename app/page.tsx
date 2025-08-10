@@ -47,10 +47,10 @@ interface PolicyFormData {
   "Insured Name": string
   "Policy Start Date": string
   "Expiry Date": string
-  "Sum Insured": string
-  "Premium": string
-  "GST": string
-  "Total Premium": string
+  "Sum Insured (in ₹)": string
+  "Premium (in ₹)": string
+  "GST (in ₹)": string
+  "Total Premium (in ₹)": string
 }
 
 export default function Home() {
@@ -63,10 +63,10 @@ export default function Home() {
     "Insured Name": '',
     "Policy Start Date": '',
     "Expiry Date": '',
-    "Sum Insured": '',
-    "Premium": '',
-    "GST": '',
-    "Total Premium": '',
+    "Sum Insured (in ₹)": '',
+    "Premium (in ₹)": '',
+    "GST (in ₹)": '',
+    "Total Premium (in ₹)": '',
   })
 
   function formatDate(dateStr: string): string {
@@ -92,32 +92,41 @@ export default function Home() {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  // Format number to Indian numbering system (1,22,000/-)
+  const formatIndianNumber = (num: number): string => {
+    return `${num.toLocaleString('en-IN', {
+      maximumFractionDigits: 2,
+      useGrouping: true,
+    })}/-`;
+  };
+
   const handleGSTChange = (field: keyof PolicyFormData, value: string) => {
-    const cleanValue = value.replace(/[^0-9.]/g, "")
-    const premiumValue = Number.parseFloat(cleanValue)
+    // Remove all non-digit characters except decimal point
+    const cleanValue = value.replace(/[^0-9.]/g, '');
+    const numericValue = cleanValue === '' ? 0 : Number(cleanValue);
 
-    if (!isNaN(premiumValue)) {
+    if (!isNaN(numericValue)) {
       // Calculate 18% GST on the premium
-      const gstAmount = Math.round(premiumValue * 0.18)
-      const total = premiumValue + gstAmount
+      const gstAmount = Math.round(numericValue * 0.18);
+      const total = numericValue + gstAmount;
 
-      console.log("Premium:", premiumValue)
-      console.log("Calculated GST (18%):", gstAmount)
-      console.log("Total Premium (Premium + GST):", total)
+      console.log("Premium:", numericValue);
+      console.log("Calculated GST (18%):", formatIndianNumber(gstAmount));
+      console.log("Total Premium (Premium + GST):", formatIndianNumber(total));
 
       setFormData(prev => ({
         ...prev,
-        [field]: cleanValue,
-        "GST": gstAmount.toString(),
-        "Total Premium": total.toString()
-      }))
+        [field]: formatIndianNumber(numericValue),
+        "GST (in ₹)": formatIndianNumber(gstAmount),
+        "Total Premium (in ₹)": formatIndianNumber(total),
+      }));
     } else {
       // If invalid number, just update the premium field
       setFormData(prev => ({
         ...prev,
         [field]: cleanValue,
-        "GST": '',
-        "Total Premium": ''
+        "GST (in ₹)": '',
+        "Total Premium (in ₹)": ''
       }))
       console.log("Invalid premium value:", cleanValue)
     }
@@ -133,10 +142,10 @@ export default function Home() {
       "Insured Name": "",
       "Policy Start Date": "",
       "Expiry Date": "",
-      "Sum Insured": "",
-      "Premium": "",
-      "GST": "",
-      "Total Premium": "",
+      "Sum Insured (in ₹)": "",
+      "Premium (in ₹)": "",
+      "GST (in ₹)": "",
+      "Total Premium (in ₹)": "",
     })
     toast.success("Form reset successfully!")
   }
@@ -151,7 +160,7 @@ export default function Home() {
 
     if (missingFields.length > 0) {
       const errorMsg = `Please fill in all required fields: ${missingFields.join(", ")}`
-      console.error('Validation failed:', errorMsg)
+      // console.error('Validation failed:', errorMsg)
       toast.error(errorMsg)
       return
     }
@@ -189,10 +198,10 @@ export default function Home() {
           "Insured Name": "",
           "Policy Start Date": "",
           "Expiry Date": "",
-          "Sum Insured": "",
-          "Premium": "",
-          "GST": "",
-          "Total Premium": "",
+          "Sum Insured (in ₹)": "",
+          "Premium (in ₹)": "",
+          "GST (in ₹)": "",
+          "Total Premium (in ₹)": "",
         })
         toast.success("Policy data saved to Google Sheet successfully!")
       } else {
@@ -228,7 +237,7 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="companyName" className="text-sm font-medium text-gray-600">
-                    Company Name
+                    Company Name 
                   </Label>
                   <Select value={formData['Company Name']} onValueChange={(value) => handleInputChange('Company Name', value)}>
                     <SelectTrigger className="bg-gray-100 w-full border-0 focus:ring-2 focus:ring-blue-500">
@@ -236,6 +245,8 @@ export default function Home() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="New India Assurance">New India Assurance</SelectItem>
+                      <SelectItem value="National Insurance Co. Ltd.">National Insurance Co. Ltd.</SelectItem>
+                      <SelectItem value="Oriental Insurance Co. Ltd.">Oriental Insurance Co. Ltd.</SelectItem>
                       <SelectItem value="Bajaj Alianz GIC Ltd.">Bajaj Alianz GIC Ltd.</SelectItem>
                       <SelectItem value="Future Generali GIC Ltd.">Future Generali GIC Ltd.</SelectItem>
                       <SelectItem value="TATA AIG GIC Ltd.">TATA AIG GIC Ltd.</SelectItem>
@@ -243,9 +254,7 @@ export default function Home() {
                       <SelectItem value="Shriram GIC Ltd.">Shriram GIC Ltd.</SelectItem>
                       <SelectItem value="Royal Sundaram">Royal Sundaram</SelectItem>
                       <SelectItem value="HDFC ERGO GIC Ltd.">HDFC ERGO GIC Ltd.</SelectItem>
-                      <SelectItem value="National Insurance Co. Ltd.">National Insurance Co. Ltd.</SelectItem>
-                      <SelectItem value="Oriental Insurance Co. Ltd.">Oriental Insurance Co. Ltd.</SelectItem>
-                      <SelectItem value="ICICI Lombard">ICICI Lombard</SelectItem>
+                      <SelectItem value="ICICI Lombard GIC Ltd.">ICICI Lombard GIC Ltd.</SelectItem>
                       <SelectItem value="Reliance GIC Ltd.">Reliance GIC Ltd.</SelectItem>
                       <SelectItem value="SBI GIC Ltd.">SBI GIC Ltd.</SelectItem>
                       <SelectItem value="Star & Allied GIC Ltd.">Star & Allied GIC Ltd.</SelectItem>
@@ -376,24 +385,24 @@ export default function Home() {
                   <Label htmlFor="sumInsured" className="text-sm font-medium text-gray-600">
                     Sum Insured (in ₹)
                   </Label>
-                  <Select value={formData['Sum Insured']} onValueChange={(value) => handleInputChange('Sum Insured', value)}>
+                  <Select value={formData['Sum Insured (in ₹)']} onValueChange={(value) => handleInputChange('Sum Insured (in ₹)', value)}>
                     <SelectTrigger className="bg-gray-100 w-full border-0 focus:ring-2 focus:ring-blue-500">
                       <SelectValue placeholder="Select Sum Insured" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="100000">₹1,00,000</SelectItem>
-                      <SelectItem value="200000">₹2,00,000</SelectItem>
-                      <SelectItem value="300000">₹3,00,000</SelectItem>
-                      <SelectItem value="400000">₹4,00,000</SelectItem>
-                      <SelectItem value="500000">₹5,00,000</SelectItem>
-                      <SelectItem value="800000">₹8,00,000</SelectItem>
-                      <SelectItem value="1000000">₹10,00,000</SelectItem>
-                      <SelectItem value="1300000">₹13,00,000</SelectItem>
-                      <SelectItem value="1500000">₹15,00,000</SelectItem>
-                      <SelectItem value="2000000">₹20,00,000</SelectItem>
-                      <SelectItem value="2200000">₹22,00,000</SelectItem>
-                      <SelectItem value="2500000">₹25,00,000</SelectItem>
-                      <SelectItem value="5000000">₹50,00,000</SelectItem>
+                      <SelectItem value="1,00,000">₹1,00,000</SelectItem>
+                      <SelectItem value="2,00,000">₹2,00,000</SelectItem>
+                      <SelectItem value="3,00,000">₹3,00,000</SelectItem>
+                      <SelectItem value="4,00,000">₹4,00,000</SelectItem>
+                      <SelectItem value="5,00,000">₹5,00,000</SelectItem>
+                      <SelectItem value="8,00,000">₹8,00,000</SelectItem>
+                      <SelectItem value="10,00,000">₹10,00,000</SelectItem>
+                      <SelectItem value="13,00,000">₹13,00,000</SelectItem>
+                      <SelectItem value="15,00,000">₹15,00,000</SelectItem>
+                      <SelectItem value="20,00,000">₹20,00,000</SelectItem>
+                      <SelectItem value="22,00,000">₹22,00,000</SelectItem>
+                      <SelectItem value="25,00,000">₹25,00,000</SelectItem>
+                      <SelectItem value="50,00,000">₹50,00,000</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -405,8 +414,8 @@ export default function Home() {
                   <Input
                     id="premium"
                     type="text"
-                    value={formData['Premium']}
-                    onChange={(e) => handleGSTChange('Premium', e.target.value)}
+                    value={formData['Premium (in ₹)']}
+                    onChange={(e) => handleGSTChange('Premium (in ₹)', e.target.value)}
                     placeholder="Enter Premium (in ₹)"
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                   />
@@ -421,8 +430,8 @@ export default function Home() {
                   <Input
                     id="gst"
                     type="text"
-                    value={formData['GST']}
-                    onChange={(e) => handleInputChange('GST', e.target.value)}
+                    value={formData['GST (in ₹)']}
+                    onChange={(e) => handleInputChange('GST (in ₹)', e.target.value)}
                     placeholder="Enter GST (in 18%)"
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                     readOnly
@@ -436,8 +445,8 @@ export default function Home() {
                   <Input
                     id="totalPremium"
                     type="text"
-                    value={formData['Total Premium']}
-                    onChange={(e) => handleInputChange('Total Premium', e.target.value)}
+                    value={formData['Total Premium (in ₹)']}
+                    onChange={(e) => handleInputChange('Total Premium (in ₹)', e.target.value)}
                     placeholder="Enter Total Premium (in ₹)"
                     className="bg-gray-100 border-0 focus:ring-2 focus:ring-blue-500"
                   />
